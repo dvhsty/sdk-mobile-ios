@@ -304,11 +304,22 @@ public class AuthProvider {
         return authStateManager.getCurrentState()?.getClaims()
     }
     
+    /// Revokes the active refresh token, or the access token if no refresh token is available.
+    /// On success, clears the stored auth state and calls `callback` with `nil`.
+    ///
+    /// Calls `callback` with ``CustomError/operationNotPossible`` if there is no current state,
+    /// no revocation endpoint, or no token to revoke. Calls `callback` with the underlying
+    /// `Error` if the network request fails, or with ``CustomError/unexpected`` for a non-200
+    /// response or an unexpected response type.
+    ///
+    /// - Parameters:
+    ///     - callback: Called on the main thread when the operation completes. Receives `nil` on success or an error on failure.
     public func revoke(finished callback: @escaping (Error?) -> Void) {
         log("revoke called")
 
         guard let currentState = authStateManager.getCurrentState() else {
             log("currentState is nil")
+            callback(CustomError.operationNotPossible)
             return
         }
 
@@ -317,6 +328,7 @@ public class AuthProvider {
                 .revocableEndpoint
         else {
             log("revocation endpoint is nil")
+            callback(CustomError.operationNotPossible)
             return
         }
         
@@ -329,6 +341,7 @@ public class AuthProvider {
         
         guard let tokenToRevoke = tokenToRevoke else {
             log("No token to revoke")
+            callback(CustomError.operationNotPossible)
             return
         }
         
@@ -523,6 +536,7 @@ enum CustomError: Error {
     case userAgent
     case stateMissing
     case appDelegate
+    case operationNotPossible
 }
 
 extension CustomError: LocalizedError {
@@ -536,6 +550,8 @@ extension CustomError: LocalizedError {
             return NSLocalizedString("You have to perform a login before use this", comment: "Custom error")
         case .appDelegate:
             return NSLocalizedString("Error accessing AppDelegate", comment: "Custom error")
+        case .operationNotPossible:
+            return NSLocalizedString("Operation cannot be performed", comment: "Custom error")
         }
     }
 }
