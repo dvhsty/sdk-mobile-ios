@@ -5,31 +5,39 @@ class AuthStateManager: NSObject, OIDAuthStateChangeDelegate {
     private let storage: Storage
 
     private var currentState: OIDAuthState? = nil
+    
+    private let queue = DispatchQueue(label: "com.strivacity.sdk.auth-state-manager", attributes: .concurrent)
 
     public init(storage: Storage) {
         self.storage = storage
     }
 
     func getCurrentState() -> OIDAuthState? {
-        log("get current state")
-        if currentState == nil {
-            currentState = storage.getState()
+        queue.sync {
+            log("get current state")
+            if currentState == nil {
+                currentState = storage.getState()
+            }
+            currentState?.stateChangeDelegate = self
+            return currentState
         }
-        currentState?.stateChangeDelegate = self
-        return currentState
     }
 
     func setCurrentState(state: OIDAuthState?) {
-        log("set current state")
-        storage.setState(authState: state)
-        currentState = state
-        currentState?.stateChangeDelegate = self
+        queue.sync(flags: .barrier) {
+            self.log("set current state")
+            self.storage.setState(authState: state)
+            self.currentState = state
+            self.currentState?.stateChangeDelegate = self
+        }
     }
 
     func resetCurrentState() {
-        log("reset current state")
-        storage.clear()
-        currentState = nil
+        queue.sync(flags: .barrier) {
+            self.log("reset current state")
+            self.storage.clear()
+            self.currentState = nil
+        }
     }
 
     private func log(_ msg: StaticString) {
