@@ -18,6 +18,7 @@ public protocol Storage {
     func getState() -> OIDAuthState?
 }
 
+/// Reference implementation for Storage protocol
 struct StorageImpl: Storage {
     private let KEY = "com.strivacity.sdk.AuthState"
 
@@ -27,6 +28,7 @@ struct StorageImpl: Storage {
         self.keychain = keychain
     }
 
+    /// Clears storage, effectively forgetting current authentication state
     func clear() {
         log("clear storage")
 
@@ -38,6 +40,8 @@ struct StorageImpl: Storage {
         keychain.delete(query)
     }
 
+    /// Saves `authState` to the keychain, or clears storage if `nil`.
+    /// Logs and returns early if archiving fails. On a duplicate-item error, updates the existing entry; other keychain errors are logged.
     func setState(authState: OIDAuthState?) {
         log("save state in storage")
         if let authState = authState {
@@ -76,6 +80,8 @@ struct StorageImpl: Storage {
         }
     }
 
+    /// Retrieves the auth state from the keychain.
+    /// Returns `nil` if the item is missing, the data is invalid, or unarchiving fails. This error behavior allows apps to re-authenticate the account.
     func getState() -> OIDAuthState? {
         log("get state from storage")
 
