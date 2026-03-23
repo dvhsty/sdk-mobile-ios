@@ -43,7 +43,10 @@ struct StorageImpl: Storage {
         if let authState = authState {
             log("authState is not nil")
 
-            let data = NSKeyedArchiver.archivedData(withRootObject: authState)
+            guard let data = try? NSKeyedArchiver.archivedData(withRootObject: authState, requiringSecureCoding: true) else {
+                log("Error during archiving authState")
+                return
+            }
 
             let query = [
                 kSecValueData: data,
